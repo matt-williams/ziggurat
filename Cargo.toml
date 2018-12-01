@@ -1,0 +1,16 @@
+[package]
+name = "ziggurat"
+version = "0.1.0"
+authors = ["Matt Williams <matwilliams@hotmail.com>"]
+
+[dependencies]
+cgmath = "0.16"
+# Need to tie to a particular revision to avoid needing #![feature(use_extern_macros)]
+# (and hence nightly) - this fix hasn't made it into a full release yet.
+stdweb = { git = "https://github.com/koute/stdweb.git", rev = "f1fc5e3" }
+stdweb-derive = { git = "https://github.com/koute/stdweb.git", rev = "f1fc5e3" }
+serde = "1"
+serde_derive = "1"
+
+[build-dependencies]
+webgl_generator = "0.2"
