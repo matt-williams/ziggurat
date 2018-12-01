@@ -1,15 +1,9 @@
-#[macro_use]
-extern crate stdweb;
 extern crate cgmath;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate stdweb_derive;
+extern crate stdweb;
+extern crate webgl;
 
 use std::cell::RefCell;
 use std::rc::Rc;
-
-mod webgl_rendering_context;
 
 use stdweb::unstable::TryInto;
 use stdweb::web::{document, window, IEventTarget, IHtmlElement, IParentNode, TypedArray};
@@ -17,8 +11,8 @@ use stdweb::web::{document, window, IEventTarget, IHtmlElement, IParentNode, Typ
 use stdweb::web::event::ResizeEvent;
 
 use stdweb::web::html_element::CanvasElement;
-use webgl_rendering_context::WebGLRenderingContext as gl;
-use webgl_rendering_context::{
+use webgl::WebGLRenderingContext as gl;
+use webgl::{
     WebGLBuffer, WebGLProgram, WebGLRenderingContext, WebGLUniformLocation,
 };
 
