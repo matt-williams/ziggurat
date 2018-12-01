@@ -30,5 +30,7 @@ rm -rf docs/* && cp -R target/deploy/* docs/
 ### Development server
 
 ```
-cargo web start
+cargo web start --auto-reload
 ```
+
+If (like me), you use vim as your editor, make sure you're not storing your swap, backup or undo files in your working directory, as it confuses `cargo-web` and makes it rebuild (and reload) far more frequently than needed.
