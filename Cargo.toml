@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Matt Williams <matwilliams@hotmail.com>"]
 
 [dependencies]
+bitflags = "1"
 cgmath = "0.16"
 # Need to tie to a particular revision to avoid needing #![feature(use_extern_macros)]
 # (and hence nightly) - this fix hasn't made it into a full release yet.

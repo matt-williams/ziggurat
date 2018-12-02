@@ -1,4 +1,7 @@
+#[macro_use]
+extern crate bitflags;
 extern crate cgmath;
+#[macro_use]
 extern crate stdweb;
 extern crate webgl;
 
@@ -8,7 +11,7 @@ use std::rc::Rc;
 use stdweb::unstable::TryInto;
 use stdweb::web::{document, window, IEventTarget, IHtmlElement, IParentNode, TypedArray};
 
-use stdweb::web::event::ResizeEvent;
+use stdweb::web::event::{IKeyboardEvent, KeyDownEvent, KeyUpEvent, ResizeEvent};
 
 use stdweb::web::html_element::CanvasElement;
 use webgl::WebGLRenderingContext as gl;
@@ -20,6 +23,7 @@ use cgmath::{vec3, Deg, Euler, Matrix4, PerspectiveFov, Rad};
 
 trait Mesh {
     fn vertices(&self) -> &[f32];
+    fn normals(&self) -> &[f32];
     fn colors(&self) -> &[f32];
     fn indices(&self) -> &[u16];
 
@@ -28,6 +32,11 @@ trait Mesh {
         let vertex_buffer = context.create_buffer().unwrap();
         context.bind_buffer(gl::ARRAY_BUFFER, Some(&vertex_buffer));
         context.buffer_data_1(gl::ARRAY_BUFFER, Some(&vertices), gl::STATIC_DRAW);
+
+        let normals = TypedArray::<f32>::from(self.normals()).buffer();
+        let normal_buffer = context.create_buffer().unwrap();
+        context.bind_buffer(gl::ARRAY_BUFFER, Some(&normal_buffer));
+        context.buffer_data_1(gl::ARRAY_BUFFER, Some(&normals), gl::STATIC_DRAW);
 
         let colors = TypedArray::<f32>::from(self.colors()).buffer();
         let color_buffer = context.create_buffer().unwrap();
@@ -39,7 +48,7 @@ trait Mesh {
         context.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, Some(&index_buffer));
         context.buffer_data_1(gl::ELEMENT_ARRAY_BUFFER, Some(&indices), gl::STATIC_DRAW);
 
-        BoundMesh::new(vertex_buffer, color_buffer, index_buffer)
+        BoundMesh::new(vertex_buffer, normal_buffer, color_buffer, index_buffer)
     }
 }
 
@@ -52,6 +61,35 @@ impl Mesh for Cube {
             1., 1., -1., 1., 1., -1., -1., -1., -1., 1., -1., -1., 1., 1., -1., -1., 1., 1., -1.,
             -1., 1., 1., -1., 1., 1., 1., 1., -1., 1., -1., -1., -1., -1., -1., 1., 1., -1., 1.,
             1., -1., -1., -1., 1., -1., -1., 1., 1., 1., 1., 1., 1., 1., -1.,
+        ]
+    }
+
+    fn normals(&self) -> &[f32] {
+        &[
+            0., 0., -1.,
+            0., 0., -1.,
+            0., 0., -1.,
+            0., 0., -1.,
+            0., 0., 1.,
+            0., 0., 1.,
+            0., 0., 1.,
+            0., 0., 1.,
+            -1., 0., 0.,
+            -1., 0., 0.,
+            -1., 0., 0.,
+            -1., 0., 0.,
+            1., 0., 0.,
+            1., 0., 0.,
+            1., 0., 0.,
+            1., 0., 0.,
+            0., -1., 0.,
+            0., -1., 0.,
+            0., -1., 0.,
+            0., -1., 0.,
+            0., 1., 0.,
+            0., 1., 0.,
+            0., 1., 0.,
+            0., 1., 0.,
         ]
     }
 
@@ -74,6 +112,7 @@ impl Mesh for Cube {
 
 struct BoundMesh {
     pub vertex_buffer: WebGLBuffer,
+    pub normal_buffer: WebGLBuffer,
     pub color_buffer: WebGLBuffer,
     pub index_buffer: WebGLBuffer,
 }
@@ -81,11 +120,13 @@ struct BoundMesh {
 impl BoundMesh {
     pub fn new(
         vertex_buffer: WebGLBuffer,
+        normal_buffer: WebGLBuffer,
         color_buffer: WebGLBuffer,
         index_buffer: WebGLBuffer,
     ) -> Self {
         BoundMesh {
             vertex_buffer,
+            normal_buffer,
             color_buffer,
             index_buffer,
         }
@@ -115,6 +156,15 @@ impl Shader {
     }
 }
 
+bitflags! {
+    struct Keys: u8 {
+        const UP    = 0b0000_0001;
+        const DOWN  = 0b0000_0010;
+        const LEFT  = 0b0000_0100;
+        const RIGHT = 0b0000_1000;
+    }
+}
+
 struct State {
     time_old: f64,
     mov_matrix: Matrix4<f32>,
@@ -125,15 +175,17 @@ struct State {
     v_matrix: WebGLUniformLocation,
     m_matrix: WebGLUniformLocation,
     cube: BoundMesh,
+    keys: Keys,
+    prev_keys: Keys,
 }
 
 impl State {
     fn animate(&mut self, time: f64, rc: Rc<RefCell<Self>>) {
         let dt = (time - self.time_old) as f32;
         self.mov_matrix = self.mov_matrix * Matrix4::<f32>::from(Euler::new(
-            Rad(dt * 0.0002),
-            Rad(dt * 0.0003),
-            Rad(dt * 0.0007),
+            Rad(dt * 0.001 * (self.keys.contains(Keys::RIGHT) as i8 - self.keys.contains(Keys::LEFT) as i8) as f32),
+            Rad(dt * 0.001 * (self.keys.contains(Keys::UP) as i8 - self.keys.contains(Keys::DOWN) as i8) as f32),
+            Rad(0.),
         ));
         self.time_old = time;
 
@@ -177,6 +229,7 @@ impl State {
         window().request_animation_frame(move |time| {
             rc.borrow_mut().animate(time, rc.clone());
         });
+        self.prev_keys = self.keys;
     }
 }
 
@@ -208,11 +261,13 @@ fn main() {
         &context,
         r#"
         attribute vec3 position;
+        attribute vec3 normal;
         uniform mat4 Pmatrix;
         uniform mat4 Vmatrix;
         uniform mat4 Mmatrix;
         attribute vec3 color;
         varying vec3 vColor;
+        varying vec3 vNormal;
 
         void main() {
             gl_Position = Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);
@@ -262,7 +317,35 @@ fn main() {
         v_matrix,
         m_matrix,
         cube,
+        keys: Keys::empty(),
+        prev_keys: Keys::empty(),
     }));
+
+    window().add_event_listener({
+        let state = state.clone();
+        move |evt: KeyDownEvent| {
+            match evt.code().as_str() {
+                "KeyA" => state.borrow_mut().keys |= Keys::LEFT,
+                "KeyW" => state.borrow_mut().keys |= Keys::UP,
+                "KeyS" => state.borrow_mut().keys |= Keys::DOWN,
+                "KeyD" => state.borrow_mut().keys |= Keys::RIGHT,
+                _ => {},
+            }
+        }
+    });
+
+    window().add_event_listener({
+        let state = state.clone();
+        move |evt: KeyUpEvent| {
+            match evt.code().as_str() {
+                "KeyA" => state.borrow_mut().keys &= !Keys::LEFT,
+                "KeyW" => state.borrow_mut().keys &= !Keys::UP,
+                "KeyS" => state.borrow_mut().keys &= !Keys::DOWN,
+                "KeyD" => state.borrow_mut().keys &= !Keys::RIGHT,
+                _ => {},
+            }
+        }
+    });
 
     state.borrow_mut().animate(0., state.clone());
 
