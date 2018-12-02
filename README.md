@@ -12,10 +12,6 @@ This is an attempt at a [Ludum Dare 43](http://ldjam.com/events/ludum-dare/43) e
 # Install Rust
 curl https://sh.rustup.rs -sSf | sh
 
-# Install the wasm32-unknown-unknown toolchain to compile to WebAssembly.
-rustup update
-rustup target add wasm32-unknown-unknown
-
 # Install cargo-web to make it easier to build WebAssembly projects.
 cargo install cargo-web
 ```

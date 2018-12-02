@@ -6,6 +6,7 @@ authors = ["Matt Williams <matwilliams@hotmail.com>"]
 [dependencies]
 bitflags = "1"
 cgmath = "0.16"
+ply-rs = "0.1"
 # Need to tie to a particular revision to avoid needing #![feature(use_extern_macros)]
 # (and hence nightly) - this fix hasn't made it into a full release yet.
 stdweb = { git = "https://github.com/koute/stdweb.git", rev = "f1fc5e3" }
@@ -13,3 +14,20 @@ stdweb-derive = { git = "https://github.com/koute/stdweb.git", rev = "f1fc5e3" }
 serde = "1"
 serde_derive = "1"
 webgl = { path = "webgl" }
+
+#[dependencies.web-sys]
+#version = "0.3"
+#features = [
+#  'AudioBuffer',
+#  'AudioBufferSourceNode',
+#  'AudioBufferSourceOptions',
+#  'AudioContext',
+#  'AudioContextOptions',
+#  'AudioDestinationNode',
+#  'AudioNode',
+#  'AudioNodeOptions',
+#  'AudioParam',
+#  'GainNode',
+#  'OscillatorNode',
+#  'OscillatorType',
+#]
